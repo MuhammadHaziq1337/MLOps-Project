@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LogisticRegression, Ridge
 
-from src.models.train import (evaluate_model, train_model, tune_hyperparameters)
+from src.models.train import evaluate_model, train_model, tune_hyperparameters
 
 
 class TestModelTraining(unittest.TestCase):
@@ -47,7 +47,9 @@ class TestModelTraining(unittest.TestCase):
     @patch('mlflow.log_param')
     @patch('mlflow.sklearn.log_model')
     @patch('mlflow.end_run')
-    def test_train_classification_model(self, mock_end_run, mock_log_model, mock_log_param, mock_start_run):
+    def test_train_classification_model(
+        self, mock_end_run, mock_log_model, mock_log_param, mock_start_run
+    ):
         """Test training a classification model."""
         # Mock MLflow context
         mock_start_run.return_value = MagicMock()
@@ -75,7 +77,9 @@ class TestModelTraining(unittest.TestCase):
     @patch('mlflow.log_param')
     @patch('mlflow.sklearn.log_model')
     @patch('mlflow.end_run')
-    def test_train_regression_model(self, mock_end_run, mock_log_model, mock_log_param, mock_start_run):
+    def test_train_regression_model(
+        self, mock_end_run, mock_log_model, mock_log_param, mock_start_run
+    ):
         """Test training a regression model."""
         # Mock MLflow context
         mock_start_run.return_value = MagicMock()
@@ -103,7 +107,9 @@ class TestModelTraining(unittest.TestCase):
     @patch('mlflow.log_param')
     @patch('mlflow.sklearn.log_model')
     @patch('mlflow.end_run')
-    def test_train_random_forest(self, mock_end_run, mock_log_model, mock_log_param, mock_start_run):
+    def test_train_random_forest(
+        self, mock_end_run, mock_log_model, mock_log_param, mock_start_run
+    ):
         """Test training a random forest model."""
         # Mock MLflow context
         mock_start_run.return_value = MagicMock()
@@ -163,7 +169,8 @@ class TestModelTraining(unittest.TestCase):
         
         # Check that MLflow functions were called
         mock_start_run.assert_called_once()
-        self.assertEqual(mock_log_metric.call_count, 4)  # Four metrics should be logged
+        # Four metrics should be logged
+        self.assertEqual(mock_log_metric.call_count, 4)
     
     @patch('mlflow.start_run')
     @patch('mlflow.log_metric')
@@ -194,22 +201,27 @@ class TestModelTraining(unittest.TestCase):
         
         # Check that MLflow functions were called
         mock_start_run.assert_called_once()
-        self.assertEqual(mock_log_metric.call_count, 4)  # Four metrics should be logged
+        # Four metrics should be logged
+        self.assertEqual(mock_log_metric.call_count, 4)
     
     @patch('mlflow.set_experiment')
     @patch('mlflow.start_run')
     @patch('mlflow.log_param')
     @patch('mlflow.log_metric')
     @patch('mlflow.sklearn.log_model')
-    def test_tune_hyperparameters(self, mock_log_model, mock_log_metric, mock_log_param, mock_start_run, mock_set_experiment):
-        """Test hyperparameter tuning."""
+    def test_tune_hyperparameters(
+        self, mock_log_model, mock_log_metric, mock_log_param, mock_start_run,
+        mock_set_experiment
+    ):
+        """Test hyperparameter tuning function."""
         # Mock MLflow context
         mock_start_run.return_value = MagicMock()
         mock_start_run.return_value.__enter__.return_value = MagicMock()
         
         # Define a simple parameter grid
         param_grid = {
-            'C': [0.1, 1.0]
+            'C': [0.1, 1.0, 10.0],
+            'solver': ['liblinear']
         }
         
         # Tune hyperparameters
@@ -220,18 +232,20 @@ class TestModelTraining(unittest.TestCase):
             self.y_test_cls,
             model_type='classification',
             param_grid=param_grid,
-            cv=2,
-            use_mlflow=True,
-            experiment_name='test_tuning'
+            cv=3,
+            use_mlflow=True
         )
         
         # Check that a model and parameters are returned
         self.assertIsInstance(best_model, LogisticRegression)
         self.assertIn('C', best_params)
+        self.assertIn('solver', best_params)
         
         # Check that MLflow functions were called
-        mock_set_experiment.assert_called_once_with('test_tuning')
+        mock_set_experiment.assert_called_once()
         mock_start_run.assert_called_once()
+        self.assertGreater(mock_log_param.call_count, 0)
+        self.assertGreater(mock_log_metric.call_count, 0)
         mock_log_model.assert_called_once()
 
 

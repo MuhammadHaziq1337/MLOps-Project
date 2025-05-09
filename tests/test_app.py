@@ -1,14 +1,11 @@
 """Unit tests for the FastAPI application."""
 
-import json
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pandas as pd
 from fastapi.testclient import TestClient
 
-from src.app.main import app, PredictionInput
-
+from src.app.main import app
 
 class TestApp(unittest.TestCase):
     """Tests for the FastAPI application."""
@@ -28,7 +25,10 @@ class TestApp(unittest.TestCase):
         
         # Check response
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"status": "healthy", "message": "Model is loaded and ready for inference"})
+        self.assertEqual(
+            response.json(),
+            {"status": "healthy", "message": "Model is loaded and ready for inference"}
+        )
     
     @patch('src.app.main.model', None)
     def test_health_check_model_not_loaded(self):
@@ -38,14 +38,17 @@ class TestApp(unittest.TestCase):
         
         # Check response
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"status": "error", "message": "Model not loaded"})
+        self.assertEqual(
+            response.json(),
+            {"status": "error", "message": "Model not loaded"}
+        )
     
     @patch('src.app.main.model')
     def test_predict_binary_classification(self, mock_model):
         """Test prediction endpoint for binary classification."""
         # Set up mock model
         mock_model.predict.return_value = [1]  # Binary classification prediction
-        mock_model.predict_proba.return_value = [[0.2, 0.8]]  # Binary classification probabilities
+        mock_model.predict_proba.return_value = [[0.2, 0.8]]  # Classification probabilities
         
         # Prepare input data
         input_data = {

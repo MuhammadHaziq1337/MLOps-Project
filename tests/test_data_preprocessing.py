@@ -8,8 +8,9 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-from src.data.preprocessing import (clean_data, load_data, scale_features,
-                                  split_data)
+from src.data.preprocessing import (
+    clean_data, load_data, scale_features, split_data
+)
 
 
 class TestDataPreprocessing(unittest.TestCase):
@@ -63,7 +64,9 @@ class TestDataPreprocessing(unittest.TestCase):
             'target': [i % 2 for i in range(100)]
         })
         
-        X_train, X_test, y_train, y_test = split_data(df, 'target', test_size=0.2, random_state=42)
+        X_train, X_test, y_train, y_test = split_data(
+            df, 'target', test_size=0.2, random_state=42
+        )
         
         # Check that the splits have the correct shapes
         self.assertEqual(X_train.shape[0], 80)  # 80% of 100
