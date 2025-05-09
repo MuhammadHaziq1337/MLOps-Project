@@ -1,38 +1,145 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Images
 
 on:
   push:
-    branches: [ test, main ]
+    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag for Docker images'
+        required: false
+        default: 'latest'
 
 jobs:
-  docker:
+  verify-monitoring:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyyaml pytest
+        
+    - name: Verify monitoring configurations
+      run: python scripts/run_monitoring_tests.py
+      
+    - name: Verify monitoring requirements
+      run: |
+        # Check that prometheus-client is in requirements
+        if ! grep -q "prometheus-client" requirements.txt; then
+          echo "prometheus-client not found in requirements.txt"
+          exit 1
+        fi
+        
+    - name: Verify Dockerfile exposes metrics endpoint
+      run: |
+        # Check that the Dockerfile exposes the port used by the API
+        if ! grep -q "EXPOSE" Dockerfile; then
+          echo "Dockerfile does not expose any ports for metrics"
+          exit 1
+        fi
+        
+        # Verify metrics module is included in the Dockerfile
+        if ! grep -q "src/app/metrics.py" Dockerfile || ! grep -q "COPY src" Dockerfile; then
+          echo "Dockerfile may not include metrics module"
+          exit 1
+        fi
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: innovateanalytics/mlops-project
-          tags: |
-            type=ref,event=branch
-            type=sha,format=short
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }} 
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: verify-monitoring
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        
+    - name: Extract metadata (tags, labels)
+      id: meta
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.version }}" != "latest" ]]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        else
+          echo "version=latest" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Build and push API image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: |
+          innovateanalytics/mlops-project:${{ steps.meta.outputs.version }}
+          ${{ steps.meta.outputs.version == 'latest' && 'innovateanalytics/mlops-project:latest' || '' }}
+        cache-from: type=registry,ref=innovateanalytics/mlops-project:buildcache
+        cache-to: type=registry,ref=innovateanalytics/mlops-project:buildcache,mode=max
+        
+    - name: Build and push MLflow image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./mlflow/Dockerfile
+        push: true
+        tags: |
+          innovateanalytics/mlops-project-mlflow:${{ steps.meta.outputs.version }}
+          ${{ steps.meta.outputs.version == 'latest' && 'innovateanalytics/mlops-project-mlflow:latest' || '' }}
+        cache-from: type=registry,ref=innovateanalytics/mlops-project-mlflow:buildcache
+        cache-to: type=registry,ref=innovateanalytics/mlops-project-mlflow:buildcache,mode=max
+    
+    - name: Build and push Prometheus image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./monitoring/prometheus
+        file: ./monitoring/prometheus/Dockerfile
+        push: true
+        tags: |
+          innovateanalytics/mlops-project-prometheus:${{ steps.meta.outputs.version }}
+          ${{ steps.meta.outputs.version == 'latest' && 'innovateanalytics/mlops-project-prometheus:latest' || '' }}
+        
+    - name: Build and push Grafana image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./monitoring/grafana
+        file: ./monitoring/grafana/Dockerfile
+        push: true
+        tags: |
+          innovateanalytics/mlops-project-grafana:${{ steps.meta.outputs.version }}
+          ${{ steps.meta.outputs.version == 'latest' && 'innovateanalytics/mlops-project-grafana:latest' || '' }}
+        
+    - name: Update deployment image version
+      if: github.ref == 'refs/heads/main'
+      run: |
+        # Update the Kubernetes deployment YAML to use the new image version
+        sed -i "s|image: innovateanalytics/mlops-project:.*|image: innovateanalytics/mlops-project:${{ steps.meta.outputs.version }}|g" k8s/deployment.yaml
+        sed -i "s|image: innovateanalytics/mlops-project-mlflow:.*|image: innovateanalytics/mlops-project-mlflow:${{ steps.meta.outputs.version }}|g" k8s/mlflow-deployment.yaml
+        sed -i "s|image: innovateanalytics/mlops-project-prometheus:.*|image: innovateanalytics/mlops-project-prometheus:${{ steps.meta.outputs.version }}|g" k8s/prometheus-deployment.yaml
+        sed -i "s|image: innovateanalytics/mlops-project-grafana:.*|image: innovateanalytics/mlops-project-grafana:${{ steps.meta.outputs.version }}|g" k8s/grafana-deployment.yaml
+        
+        # If this is a versioned release, we should commit the updated deployment files
+        if [[ "${{ steps.meta.outputs.version }}" != "latest" ]]; then
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add k8s/deployment.yaml k8s/mlflow-deployment.yaml k8s/prometheus-deployment.yaml k8s/grafana-deployment.yaml
+          git commit -m "Update deployment to use version ${{ steps.meta.outputs.version }}" || echo "No changes to commit"
+          git push
+        fi 
