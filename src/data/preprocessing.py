@@ -1,7 +1,7 @@
 """Data preprocessing utilities."""
 
 import logging
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -53,7 +53,8 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         if df[col].dtype == np.number:
             df[col] = df[col].fillna(df[col].median())
         else:
-            df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "")
+            mode_value = df[col].mode()[0] if not df[col].mode().empty else ""
+            df[col] = df[col].fillna(mode_value)
             
     return df
 
