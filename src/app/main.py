@@ -9,11 +9,13 @@ from typing import Dict, Optional
 
 import joblib
 import pandas as pd
+import prometheus_client
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
+from prometheus_client import Counter, Histogram
 
 from src.app import metrics
 
@@ -68,6 +70,19 @@ DEFAULT_MODEL = os.environ.get(
 
 # Global model variable for tests
 model = None
+
+# Define model-specific metrics
+MODEL_PREDICTION_COUNT = Counter(
+    "model_prediction_counter",
+    "Number of model predictions",
+    ["model_name", "prediction_result"]
+)
+
+MODEL_PREDICTION_LATENCY = Histogram(
+    "model_prediction_latency_histogram",
+    "Latency of model predictions in seconds",
+    ["model_name"]
+)
 
 
 class PredictionRequest(BaseModel):

@@ -347,9 +347,9 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "model_prediction_count",
+              "expr": "model_prediction_latency_seconds_sum / model_prediction_latency_seconds_count",
               "interval": "",
-              "legendFormat": "{{class}}",
+              "legendFormat": "Model Prediction Latency",
               "refId": "A"
             }
           ],
@@ -357,7 +357,7 @@ data:
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Prediction Counts by Class",
+          "title": "Model Prediction Latency",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -373,7 +373,7 @@ data:
           },
           "yaxes": [
             {
-              "format": "short",
+              "format": "s",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -442,9 +442,9 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "prediction_feature_mean",
+              "expr": "model_prediction_count",
               "interval": "",
-              "legendFormat": "{{feature}}",
+              "legendFormat": "{{class_name}}",
               "refId": "A"
             }
           ],
@@ -452,7 +452,7 @@ data:
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Feature Mean Values",
+          "title": "Prediction Counts by Class",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -472,7 +472,7 @@ data:
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": null,
+              "min": "0",
               "show": true
             },
             {
