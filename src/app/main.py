@@ -2,10 +2,9 @@
 
 import logging
 import os
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
 import mlflow
-import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -30,7 +29,7 @@ model = None
 
 class PredictionInput(BaseModel):
     """Input schema for prediction endpoint."""
-    
+
     features: Dict[str, Union[float, int, str]] = Field(
         ..., description="Features for prediction"
     )
@@ -38,11 +37,16 @@ class PredictionInput(BaseModel):
 
 class PredictionResult(BaseModel):
     """Output schema for prediction endpoint."""
-    
-    prediction: Union[float, int, str] = Field(..., description="Model prediction")
-    probability: Optional[float] = Field(None, description="Prediction probability")
+
+    prediction: Union[float, int, str] = Field(
+        ..., description="Model prediction"
+    )
+    probability: Optional[float] = Field(
+        None, description="Prediction probability"
+    )
     confidence: Optional[Dict[str, float]] = Field(
-        None, description="Confidence scores for each class"
+        None,
+        description="Confidence scores for each class",
     )
 
 
@@ -50,21 +54,21 @@ class PredictionResult(BaseModel):
 async def load_model():
     """Load the model on startup."""
     global model
-    
+
     try:
-        # Get MLflow tracking URI from environment variable or use default
-        mlflow_tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
+        mlflow_tracking_uri = os.environ.get(
+            "MLFLOW_TRACKING_URI",
+            "http://localhost:5000",
+        )
         mlflow.set_tracking_uri(mlflow_tracking_uri)
-        
-        # Get model path from environment variable or use latest production model
+
         model_path = os.environ.get("MODEL_PATH", "models/latest")
-        
+
         logger.info(f"Loading model from: {model_path}")
         model = mlflow.pyfunc.load_model(model_path)
         logger.info("Model loaded successfully")
     except Exception as e:
         logger.error(f"Error loading model: {str(e)}")
-        # Initialize with a None model, will raise error on prediction if not loaded
         model = None
 
 
@@ -73,7 +77,10 @@ async def health_check():
     """Health check endpoint."""
     if model is None:
         return {"status": "error", "message": "Model not loaded"}
-    return {"status": "healthy", "message": "Model is loaded and ready for inference"}
+    return {
+        "status": "healthy",
+        "message": "Model is loaded and ready for inference",
+    }
 
 
 @app.post("/predict", response_model=PredictionResult)
@@ -81,33 +88,35 @@ async def predict(input_data: PredictionInput):
     """Make predictions with the loaded model."""
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
-    
+
     try:
-        # Convert input data to DataFrame for prediction
         features_df = pd.DataFrame([input_data.features])
-        
-        # Make prediction
         prediction = model.predict(features_df)
         result = {"prediction": prediction[0]}
-        
-        # Add probability if the model supports it
+
         if hasattr(model, "predict_proba"):
             try:
                 probabilities = model.predict_proba(features_df)
-                if probabilities.shape[1] == 2:  # Binary classification
+                if probabilities.shape[1] == 2:
                     result["probability"] = float(probabilities[0][1])
-                else:  # Multi-class classification
+                else:
                     result["confidence"] = {
-                        str(i): float(p) for i, p in enumerate(probabilities[0])
+                        str(i): float(p)
+                        for i, p in enumerate(probabilities[0])
                     }
             except Exception as e:
-                logger.warning(f"Could not get prediction probabilities: {str(e)}")
-        
+                logger.warning(
+                    f"Could not get prediction probabilities: {str(e)}"
+                )
+
         return result
-    
+
     except Exception as e:
         logger.error(f"Prediction error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction error: {str(e)}",
+        )
 
 
 @app.get("/model/info")
@@ -115,22 +124,27 @@ async def model_info():
     """Get information about the loaded model."""
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
-    
+
     try:
-        # Get model metadata from MLflow if available
         model_info = {
             "model_path": os.environ.get("MODEL_PATH", "models/latest"),
-            "mlflow_tracking_uri": os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"),
+            "mlflow_tracking_uri": os.environ.get(
+                "MLFLOW_TRACKING_URI",
+                "http://localhost:5000",
+            ),
         }
-        
+
         return model_info
-    
+
     except Exception as e:
         logger.error(f"Error getting model info: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting model info: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting model info: {str(e)}",
+        )
 
 
 if __name__ == "__main__":
     import uvicorn
-    
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)

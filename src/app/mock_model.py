@@ -50,11 +50,11 @@ def save_mock_model(path="models/latest"):
     """Save a mock model to disk."""
     os.makedirs(path, exist_ok=True)
     model = get_mock_model()
-    
+
     # Save the model
     with open(os.path.join(path, "model.pkl"), "wb") as f:
         pickle.dump(model, f)
-        
+
     # Save MLmodel file
     mlmodel_content = """
 artifact_path: model
@@ -77,5 +77,5 @@ utc_time_created: '2023-05-11 00:00:00.000000'
 """
     with open(os.path.join(path, "MLmodel"), "w") as f:
         f.write(mlmodel_content)
-        
-    return os.path.join(path, "model.pkl") 
+
+    return os.path.join(path, "model.pkl")
