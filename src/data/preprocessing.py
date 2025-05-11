@@ -1,7 +1,7 @@
 """Data preprocessing utilities."""
 
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union, List, Dict, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -49,7 +49,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop_duplicates()
 
     for col in df.columns:
-        if np.issubdtype(df[col].dtype, np.number):
+        if pd.api.types.is_numeric_dtype(df[col]):
             df[col] = df[col].fillna(df[col].median())
         else:
             mode_value = df[col].mode()[0] if not df[col].mode().empty else ""
@@ -81,9 +81,7 @@ def split_data(
     X = df.drop(columns=[target_col])
     y = df[target_col]
 
-    return train_test_split(
-        X, y, test_size=test_size, random_state=random_state
-    )
+    return train_test_split(X, y, test_size=test_size, random_state=random_state)
 
 
 def scale_features(
