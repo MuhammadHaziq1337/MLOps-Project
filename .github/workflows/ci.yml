@@ -45,7 +45,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e .[dev]
-          pip install pytest pytest-cov PyYAML fastapi requests fastapi[testing]
+          pip install pytest pytest-cov PyYAML fastapi requests httpx fastapi[testing]
       - name: Create data directories
         run: |
           mkdir -p data/raw
