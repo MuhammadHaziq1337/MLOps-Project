@@ -59,7 +59,7 @@ class TestDockerMonitoring(unittest.TestCase):
             app_content = f.read()
 
         # Check for metrics endpoint in FastAPI app - use a more flexible
-# pattern
+        # pattern
         metrics_endpoint_defined = (
             re.search(r'@app\s*\.\s*get\s*\(\s*[\'"]\/metrics', app_content)
             or re.search(r'app\.get\s*\(\s*[\'"]\/metrics', app_content)

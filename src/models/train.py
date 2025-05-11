@@ -7,9 +7,16 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import LogisticRegression, Ridge
-from sklearn.metrics import (accuracy_score, f1_score, mean_absolute_error,
-                             mean_squared_error, precision_score, r2_score,
-                             recall_score, roc_auc_score)
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    mean_absolute_error,
+    mean_squared_error,
+    precision_score,
+    r2_score,
+    recall_score,
+    roc_auc_score,
+)
 from sklearn.model_selection import GridSearchCV
 
 # Try to import MLflow, but continue if not available
@@ -64,17 +71,13 @@ def train_model(
     # Select model based on type
     if model_type == "classification":
         if model_params.get("model_name") == "random_forest":
-            params = {
-                k: v for k, v in model_params.items() if k != "model_name"
-            }
+            params = {k: v for k, v in model_params.items() if k != "model_name"}
             model = RandomForestClassifier(**params)
         else:
             model = LogisticRegression(**model_params)
     elif model_type == "regression":
         if model_params.get("model_name") == "random_forest":
-            params = {
-                k: v for k, v in model_params.items() if k != "model_name"
-            }
+            params = {k: v for k, v in model_params.items() if k != "model_name"}
             model = RandomForestRegressor(**params)
         else:
             model = Ridge(**model_params)
@@ -180,19 +183,25 @@ def tune_hyperparameters(
     """
     logger.info(f"Performing hyperparameter tuning for {model_type} model")
 
-    if param_grid is None:
-        if model_type == "classification":
+    # Initialize base_model
+    base_model = None
+    if model_type == "classification":
+        base_model = LogisticRegression()
+        if param_grid is None:
             param_grid = {
                 "C": [0.01, 0.1, 1.0, 10.0],
                 "solver": ["liblinear", "lbfgs"],
             }
-            base_model = LogisticRegression()
-        else:  # regression
+    else:  # regression
+        base_model = Ridge()
+        if param_grid is None:
             param_grid = {
                 "alpha": [0.01, 0.1, 1.0, 10.0],
                 "solver": ["auto", "svd", "cholesky"],
             }
-            base_model = Ridge()
+
+    if base_model is None:
+        raise ValueError(f"Unsupported model type: {model_type}")
 
     scoring = (
         "accuracy"

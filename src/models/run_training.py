@@ -16,10 +16,7 @@ try:
     MLFLOW_AVAILABLE = True
 except ImportError:
     MLFLOW_AVAILABLE = False
-    print(
-        "Warning: MLflow not available. "
-        "Will save model without MLflow tracking."
-    )
+    print("Warning: MLflow not available. " "Will save model without MLflow tracking.")
 
 from src.models.train import evaluate_model, train_model
 
@@ -44,16 +41,12 @@ def load_data(dataset_name: str, data_dir: str = "data/processed") -> tuple:
     """
     logger.info(f"Loading processed data for {dataset_name} dataset")
 
-    X_train = pd.read_csv(
-        os.path.join(data_dir, f"{dataset_name}_X_train.csv")
-    )
+    X_train = pd.read_csv(os.path.join(data_dir, f"{dataset_name}_X_train.csv"))
     X_test = pd.read_csv(os.path.join(data_dir, f"{dataset_name}_X_test.csv"))
     y_train = pd.read_csv(
         os.path.join(data_dir, f"{dataset_name}_y_train.csv")
     ).squeeze()
-    y_test = pd.read_csv(
-        os.path.join(data_dir, f"{dataset_name}_y_test.csv")
-    ).squeeze()
+    y_test = pd.read_csv(os.path.join(data_dir, f"{dataset_name}_y_test.csv")).squeeze()
 
     logger.info(
         f"Loaded data with {X_train.shape[0]} training samples and "
@@ -97,9 +90,7 @@ def save_metrics(metrics: dict, output_path: str) -> None:
 
 def main():
     """Main function to train models."""
-    parser = argparse.ArgumentParser(
-        description="Train machine learning model"
-    )
+    parser = argparse.ArgumentParser(description="Train machine learning model")
     parser.add_argument(
         "--dataset",
         type=str,

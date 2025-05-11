@@ -50,9 +50,7 @@ class TestApp(unittest.TestCase):
     def test_predict_binary_classification(self, mock_model):
         """Test prediction endpoint for binary classification."""
         # Set up mock model
-        mock_model.predict.return_value = [
-            1
-        ]  # Binary classification prediction
+        mock_model.predict.return_value = [1]  # Binary classification prediction
         mock_model.predict_proba.return_value = [
             [0.2, 0.8]
         ]  # Classification probabilities
@@ -66,7 +64,7 @@ class TestApp(unittest.TestCase):
         # Check response
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["prediction"], 1)
+        self.assertEqual(result["prediction"], "1")
         self.assertAlmostEqual(result["probability"], 0.8)
 
         # Check that the model was called with the correct data
@@ -77,12 +75,11 @@ class TestApp(unittest.TestCase):
     def test_predict_multiclass_classification(self, mock_model):
         """Test prediction endpoint for multiclass classification."""
         # Set up mock model
-        mock_model.predict.return_value = [
-            2
-        ]  # Multiclass classification prediction
+        mock_model.predict.return_value = [2]  # Multiclass classification prediction
         mock_model.predict_proba.return_value = [
             [0.1, 0.2, 0.7]
         ]  # Multiclass probabilities
+        mock_model.classes_ = [0, 1, 2]  # Add classes attribute
 
         # Prepare input data
         input_data = {"features": {"feature1": 0.5, "feature2": 0.7}}
@@ -93,8 +90,8 @@ class TestApp(unittest.TestCase):
         # Check response
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["prediction"], 2)
-        self.assertEqual(result["confidence"], {"0": 0.1, "1": 0.2, "2": 0.7})
+        self.assertEqual(result["prediction"], "2")
+        self.assertAlmostEqual(result["probability"], 0.7)
 
         # Check that the model was called with the correct data
         mock_model.predict.assert_called_once()
@@ -117,8 +114,8 @@ class TestApp(unittest.TestCase):
         # Check response
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["prediction"], 3.14)
-        self.assertNotIn("probability", result)
+        self.assertEqual(result["prediction"], "3.14")
+        self.assertIsNone(result["probability"])
         self.assertNotIn("confidence", result)
 
         # Check that the model was called with the correct data
@@ -142,7 +139,7 @@ class TestApp(unittest.TestCase):
     def test_model_info(self, mock_environ, mock_model):
         """Test model info endpoint."""
         # Set up environment variables
-        mock_environ.get.side_effect = lambda key, default: {
+        mock_environ.get.side_effect = lambda key, default=None: {
             "MODEL_PATH": "models/test_model",
             "MLFLOW_TRACKING_URI": "http://test-mlflow:5000",
         }.get(key, default)
@@ -154,9 +151,7 @@ class TestApp(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertEqual(result["model_path"], "models/test_model")
-        self.assertEqual(
-            result["mlflow_tracking_uri"], "http://test-mlflow:5000"
-        )
+        self.assertEqual(result["mlflow_tracking_uri"], "http://test-mlflow:5000")
 
 
 if __name__ == "__main__":

@@ -52,9 +52,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
-        metrics.record_request_end(
-            start_time, method, path, response.status_code
-        )
+        metrics.record_request_end(start_time, method, path, response.status_code)
 
         return response
 
@@ -63,9 +61,10 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 app.add_middleware(MetricsMiddleware)
 
 MODEL_DIR = os.environ.get("MODEL_DIR", "models")
-DEFAULT_MODEL = os.environ.get(
-    "DEFAULT_MODEL", "iris_classification_model.pkl"
-)
+DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "iris_classification_model.pkl")
+
+# Global model variable for tests
+model = None
 
 
 class PredictionRequest(BaseModel):
@@ -75,7 +74,7 @@ class PredictionRequest(BaseModel):
 
 class PredictionResponse(BaseModel):
     prediction: str
-    probability: float
+    probability: Optional[float] = None
     model_name: str
     model_version: str
 
@@ -92,9 +91,7 @@ def load_model(model_name: str):
             raise ValueError(f"Unsupported model format: {model_path}")
     except Exception as e:
         logger.error(f"Error loading model {model_path}: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Error loading model: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error loading model: {str(e)}")
 
 
 def get_model_version(model_name: str) -> str:
@@ -125,63 +122,110 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    if model is not None:
+        return {
+            "status": "healthy",
+            "message": "Model is loaded and ready for inference",
+        }
+    else:
+        return {"status": "error", "message": "Model not loaded"}
 
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(request: PredictionRequest):
-    model_name = request.model_name or DEFAULT_MODEL
-    model = load_model(model_name)
+    if model is None:
+        try:
+            model_name = request.model_name or DEFAULT_MODEL
+            loaded_model = load_model(model_name)
+            
+            try:
+                features = request.features
 
-    try:
-        features = request.features
+                if hasattr(loaded_model, "feature_names_in_"):
+                    missing_features = set(loaded_model.feature_names_in_) - set(features.keys())
+                    if missing_features:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                f"Missing required features: " f"{', '.join(missing_features)}"
+                            ),
+                        )
 
-        if hasattr(model, "feature_names_in_"):
-            missing_features = set(model.feature_names_in_) - set(
-                features.keys()
-            )
-            if missing_features:
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        f"Missing required features: "
-                        f"{', '.join(missing_features)}"
-                    ),
+                    X = pd.DataFrame(
+                        [[features[feature] for feature in loaded_model.feature_names_in_]],
+                        columns=loaded_model.feature_names_in_,
+                    )
+                else:
+                    X = pd.DataFrame([features])
+
+                prediction_result = loaded_model.predict(X)[0]
+
+                probability = 0.0
+                if hasattr(loaded_model, "predict_proba"):
+                    probabilities = loaded_model.predict_proba(X)[0]
+                    prediction_idx = list(loaded_model.classes_).index(prediction_result)
+                    probability = float(probabilities[prediction_idx])
+
+                metrics.record_prediction(
+                    model_name=model_name.split(".")[0],
+                    features=features,
+                    predicted_class=str(prediction_result),
                 )
 
-            X = pd.DataFrame(
-                [[features[feature] for feature in model.feature_names_in_]],
-                columns=model.feature_names_in_,
-            )
-        else:
+                return {
+                    "prediction": str(prediction_result),
+                    "probability": probability,
+                    "model_name": model_name,
+                    "model_version": get_model_version(model_name),
+                }
+
+            except Exception as e:
+                logger.error(f"Prediction error: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+        except Exception:
+            raise HTTPException(status_code=503, detail="Model not loaded")
+    else:
+        try:
+            features = request.features
             X = pd.DataFrame([features])
 
-        prediction_result = model.predict(X)[0]
+            prediction_result = model.predict(X)[0]
 
-        probability = 0.0
-        if hasattr(model, "predict_proba"):
-            probabilities = model.predict_proba(X)[0]
-            prediction_idx = list(model.classes_).index(prediction_result)
-            probability = float(probabilities[prediction_idx])
+            response_data = {
+                "prediction": str(prediction_result),
+                "model_name": request.model_name or DEFAULT_MODEL,
+                "model_version": get_model_version(request.model_name or DEFAULT_MODEL),
+            }
+            
+            if hasattr(model, "predict_proba"):
+                probabilities = model.predict_proba(X)[0]
+                if len(probabilities) == 2:  # Binary classification
+                    probability = float(probabilities[1])
+                else:  # Multiclass classification
+                    prediction_idx = list(model.classes_).index(prediction_result)
+                    probability = float(probabilities[prediction_idx])
+                response_data["probability"] = probability
+                    
+            model_name = request.model_name or DEFAULT_MODEL
+            metrics.record_prediction(
+                model_name=model_name.split(".")[0],
+                features=features,
+                predicted_class=str(prediction_result),
+            )
 
-        metrics.record_prediction(
-            model_name=model_name.split(".")[0],
-            features=features,
-            predicted_class=str(prediction_result),
-        )
+            return response_data
 
-        return {
-            "prediction": str(prediction_result),
-            "probability": probability,
-            "model_name": model_name,
-            "model_version": get_model_version(model_name),
-        }
+        except Exception as e:
+            logger.error(f"Prediction error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
-    except Exception as e:
-        logger.error(f"Prediction error: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Prediction error: {str(e)}"
-        )
+
+@app.get("/model/info")
+async def model_info():
+    return {
+        "model_path": os.environ.get("MODEL_PATH", os.path.join(MODEL_DIR, DEFAULT_MODEL)),
+        "mlflow_tracking_uri": os.environ.get("MLFLOW_TRACKING_URI", ""),
+    }
 
 
 @app.get("/metrics", response_class=PlainTextResponse)
