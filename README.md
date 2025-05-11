@@ -3,6 +3,10 @@
 [![Continuous Integration](https://github.com/MuhammadHaziq1337/MLOps-Project/actions/workflows/ci.yml/badge.svg)](https://github.com/MuhammadHaziq1337/MLOps-Project/actions/workflows/ci.yml)
 [![Build and Push Docker Image](https://github.com/MuhammadHaziq1337/MLOps-Project/actions/workflows/docker.yml/badge.svg)](https://github.com/MuhammadHaziq1337/MLOps-Project/actions/workflows/docker.yml)
 
+## Test Branch Protection
+
+This is a test change to verify branch protection rules are working correctly.
+
 This repository contains an end-to-end MLOps implementation for a machine learning system that processes large datasets, trains predictive models, and deploys them in a scalable and reliable manner.
 
 ## Project Structure
