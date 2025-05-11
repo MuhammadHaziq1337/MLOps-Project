@@ -43,7 +43,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install -r requirements.txt
           pip install -e .[dev]
+          pip install pytest pytest-cov PyYAML fastapi requests fastapi[testing]
+      - name: Create data directories
+        run: |
+          mkdir -p data/raw
+          mkdir -p data/processed
+          mkdir -p models
       - name: Run tests
         run: pytest tests --cov=src
       - name: Upload coverage report
