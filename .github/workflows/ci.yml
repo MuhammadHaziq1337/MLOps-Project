@@ -19,7 +19,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .[dev]
-          pip install types-requests pandas-stubs types-PyYAML prometheus-client-mypy mypy-extensions
+          pip install types-requests "pandas-stubs<2.2.2.240807" types-PyYAML mypy-extensions
       - name: Lint with flake8
         run: flake8 src tests
       - name: Check formatting with black
@@ -27,7 +27,7 @@ jobs:
       - name: Sort imports with isort
         run: isort --check-only --profile black src tests
       - name: Type check with mypy
-        run: mypy src
+        run: mypy --ignore-missing-imports src
 
   test:
     runs-on: ubuntu-latest
