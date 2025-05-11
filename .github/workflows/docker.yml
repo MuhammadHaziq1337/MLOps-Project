@@ -24,7 +24,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: innovateanalytics/mlops-project
+          images: muhammadhaziq123/mlops-project
           tags: |
             type=ref,event=branch
             type=sha,format=short

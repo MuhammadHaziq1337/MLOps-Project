@@ -7,6 +7,7 @@ pipeline {
     
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+        IMAGE_NAME = 'muhammadhaziq123/mlops-project'
     }
     
     stages {
@@ -33,16 +34,16 @@ pipeline {
         
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t innovateanalytics/mlops-project:$BUILD_NUMBER .'
+                sh 'docker build -t ${IMAGE_NAME}:$BUILD_NUMBER .'
             }
         }
         
         stage('Push Docker Image') {
             steps {
                 sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-                sh 'docker push innovateanalytics/mlops-project:$BUILD_NUMBER'
-                sh 'docker tag innovateanalytics/mlops-project:$BUILD_NUMBER innovateanalytics/mlops-project:latest'
-                sh 'docker push innovateanalytics/mlops-project:latest'
+                sh 'docker push ${IMAGE_NAME}:$BUILD_NUMBER'
+                sh 'docker tag ${IMAGE_NAME}:$BUILD_NUMBER ${IMAGE_NAME}:latest'
+                sh 'docker push ${IMAGE_NAME}:latest'
             }
         }
         
