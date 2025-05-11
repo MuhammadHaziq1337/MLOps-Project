@@ -19,14 +19,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .[dev]
+          pip install types-requests pandas-stubs types-PyYAML prometheus-client-mypy mypy-extensions
       - name: Lint with flake8
         run: flake8 src tests
-      # Skip black formatting check as we've already formatted locally
-      # - name: Check formatting with black
-      #   run: black --check src tests
-      # Skip isort check as well - we'll keep our imports clean manually
-      # - name: Sort imports with isort
-      #   run: isort --check-only --profile black src tests
+      - name: Check formatting with black
+        run: black --check src tests
+      - name: Sort imports with isort
+        run: isort --check-only --profile black src tests
       - name: Type check with mypy
         run: mypy src
 
