@@ -1,1 +1,1 @@
-"""FastAPI application for model serving.""" 
+"""FastAPI application for model serving."""

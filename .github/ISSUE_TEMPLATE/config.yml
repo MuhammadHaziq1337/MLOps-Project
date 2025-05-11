@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: MLOps Project Documentation
+    url: https://github.com/MuhammadHaziq1337/MLOps-Project/blob/main/README.md
+    about: Check the project documentation for more information.
+  - name: MLOps Project Team Discussions
+    url: https://github.com/MuhammadHaziq1337/MLOps-Project/discussions
+    about: Ask questions and discuss the project with the team. 

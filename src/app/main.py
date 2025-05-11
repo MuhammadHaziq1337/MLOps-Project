@@ -1,136 +1,271 @@
-"""FastAPI application for model serving."""
+"""
+FastAPI application for serving machine learning models.
+"""
 
 import logging
 import os
-from typing import Dict, List, Optional, Union
+import pickle
+from typing import Dict, Optional
 
-import mlflow
-import numpy as np
+import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, PlainTextResponse
+from pydantic import BaseModel
+from prometheus_client import Counter, Histogram
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from src.app import metrics
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
-# Create FastAPI app
+# Initialize FastAPI app
 app = FastAPI(
-    title="Innovate Analytics MLOps Project",
-    description="API for machine learning model prediction",
-    version="0.1.0",
+    title="ML Model API",
+    description="API for serving machine learning models",
+    version="1.0.0",
 )
 
-# Define model path
-MODEL_PATH = os.environ.get("MODEL_PATH", "models/latest")
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Initialize model variable
+
+class MetricsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path == "/metrics":
+            return await call_next(request)
+
+        method = request.method
+        path = request.url.path
+        start_time = metrics.record_request_start(method, path)
+
+        response = await call_next(request)
+
+        metrics.record_request_end(
+            start_time, method, path, response.status_code)
+
+        return response
+
+
+# Add metrics middleware
+app.add_middleware(MetricsMiddleware)
+
+MODEL_DIR = os.environ.get("MODEL_DIR", "models")
+DEFAULT_MODEL = os.environ.get(
+    "DEFAULT_MODEL",
+    "iris_classification_model.pkl")
+
+# Global model variable for tests
 model = None
 
+# Define model-specific metrics
+MODEL_PREDICTION_COUNT = Counter(
+    "model_prediction_counter",
+    "Number of model predictions",
+    ["model_name", "prediction_result"]
+)
 
-class PredictionInput(BaseModel):
-    """Input schema for prediction endpoint."""
-    
-    features: Dict[str, Union[float, int, str]] = Field(
-        ..., description="Features for prediction"
-    )
-
-
-class PredictionResult(BaseModel):
-    """Output schema for prediction endpoint."""
-    
-    prediction: Union[float, int, str] = Field(..., description="Model prediction")
-    probability: Optional[float] = Field(None, description="Prediction probability")
-    confidence: Optional[Dict[str, float]] = Field(
-        None, description="Confidence scores for each class"
-    )
+MODEL_PREDICTION_LATENCY = Histogram(
+    "model_prediction_latency_histogram",
+    "Latency of model predictions in seconds",
+    ["model_name"]
+)
 
 
-@app.on_event("startup")
-async def load_model():
-    """Load the model on startup."""
-    global model
-    
+class PredictionRequest(BaseModel):
+    features: Dict[str, float]
+    model_name: Optional[str] = None
+
+
+class PredictionResponse(BaseModel):
+    prediction: str
+    probability: Optional[float] = None
+    model_name: str
+    model_version: str
+
+
+def load_model(model_name: str):
+    model_path = os.path.join(MODEL_DIR, model_name)
     try:
-        # Get MLflow tracking URI from environment variable or use default
-        mlflow_tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
-        mlflow.set_tracking_uri(mlflow_tracking_uri)
-        
-        # Get model path from environment variable or use latest production model
-        model_path = os.environ.get("MODEL_PATH", "models/latest")
-        
-        logger.info(f"Loading model from: {model_path}")
-        model = mlflow.pyfunc.load_model(model_path)
-        logger.info("Model loaded successfully")
+        if model_path.endswith(".pkl"):
+            with open(model_path, "rb") as f:
+                return pickle.load(f)
+        elif model_path.endswith(".joblib"):
+            return joblib.load(model_path)
+        else:
+            raise ValueError(f"Unsupported model format: {model_path}")
     except Exception as e:
-        logger.error(f"Error loading model: {str(e)}")
-        # Initialize with a None model, will raise error on prediction if not loaded
-        model = None
+        logger.error(f"Error loading model {model_path}: {str(e)}")
+        raise HTTPException(status_code=500,
+                            detail=f"Error loading model: {str(e)}")
+
+
+def get_model_version(model_name: str) -> str:
+    return "1.0.0"
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return """
+    <html>
+        <head>
+            <title>ML Model API</title>
+            <style>
+                body { font-family: Arial, sans-serif; max-width: 800px;
+                       margin: 0 auto; padding: 20px; }
+                h1 { color: #333; }
+                a { color: #0066cc; }
+            </style>
+        </head>
+        <body>
+            <h1>ML Model API</h1>
+            <p>API for serving machine learning models</p>
+            <p><a href="/docs">API Documentation</a></p>
+        </body>
+    </html>
+    """
 
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    if model is None:
+async def health():
+    if model is not None:
+        return {
+            "status": "healthy",
+            "message": "Model is loaded and ready for inference",
+        }
+    else:
         return {"status": "error", "message": "Model not loaded"}
-    return {"status": "healthy", "message": "Model is loaded and ready for inference"}
 
 
-@app.post("/predict", response_model=PredictionResult)
-async def predict(input_data: PredictionInput):
-    """Make predictions with the loaded model."""
+@app.post("/predict", response_model=PredictionResponse)
+async def predict(request: PredictionRequest):
     if model is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-    
-    try:
-        # Convert input data to DataFrame for prediction
-        features_df = pd.DataFrame([input_data.features])
-        
-        # Make prediction
-        prediction = model.predict(features_df)
-        result = {"prediction": prediction[0]}
-        
-        # Add probability if the model supports it
-        if hasattr(model, "predict_proba"):
+        try:
+            model_name = request.model_name or DEFAULT_MODEL
+            loaded_model = load_model(model_name)
+
             try:
-                probabilities = model.predict_proba(features_df)
-                if probabilities.shape[1] == 2:  # Binary classification
-                    result["probability"] = float(probabilities[0][1])
-                else:  # Multi-class classification
-                    result["confidence"] = {
-                        str(i): float(p) for i, p in enumerate(probabilities[0])
-                    }
+                features = request.features
+
+                if hasattr(loaded_model, "feature_names_in_"):
+                    missing_features = (
+                        set(loaded_model.feature_names_in_)
+                        - set(features.keys())
+                    )
+                    if missing_features:
+                        msg = (
+                            f"Missing required features: "
+                            f"{', '.join(missing_features)}"
+                        )
+                        raise HTTPException(status_code=400, detail=msg)
+
+                    X = pd.DataFrame(
+                        [
+                            [features[feature]
+                                for feature in loaded_model.feature_names_in_]
+                        ],
+                        columns=loaded_model.feature_names_in_,
+                    )
+                else:
+                    X = pd.DataFrame([features])
+
+                prediction_result = loaded_model.predict(X)[0]
+
+                probability = 0.0
+                if hasattr(loaded_model, "predict_proba"):
+                    probabilities = loaded_model.predict_proba(X)[0]
+                    prediction_idx = list(
+                        loaded_model.classes_).index(prediction_result)
+                    probability = float(probabilities[prediction_idx])
+
+                metrics.record_prediction(
+                    model_name=model_name.split(".")[0],
+                    features=features,
+                    predicted_class=str(prediction_result),
+                )
+
+                return {
+                    "prediction": str(prediction_result),
+                    "probability": probability,
+                    "model_name": model_name,
+                    "model_version": get_model_version(model_name),
+                }
+
             except Exception as e:
-                logger.warning(f"Could not get prediction probabilities: {str(e)}")
-        
-        return result
-    
-    except Exception as e:
-        logger.error(f"Prediction error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+                logger.error(f"Prediction error: {str(e)}")
+                raise HTTPException(
+                    status_code=500, detail=f"Prediction error: {str(e)}"
+                )
+        except Exception:
+            raise HTTPException(status_code=503, detail="Model not loaded")
+    else:
+        try:
+            features = request.features
+            X = pd.DataFrame([features])
+
+            prediction_result = model.predict(X)[0]
+
+            response_data = {
+                "prediction": str(prediction_result),
+                "model_name": request.model_name or DEFAULT_MODEL,
+                "model_version": get_model_version(
+                    request.model_name or DEFAULT_MODEL
+                ),
+            }
+
+            if hasattr(model, "predict_proba"):
+                probabilities = model.predict_proba(X)[0]
+                if len(probabilities) == 2:  # Binary classification
+                    probability = float(probabilities[1])
+                else:  # Multiclass classification
+                    prediction_idx = list(
+                        model.classes_).index(prediction_result)
+                    probability = float(probabilities[prediction_idx])
+                response_data["probability"] = probability
+
+            model_name = request.model_name or DEFAULT_MODEL
+            metrics.record_prediction(
+                model_name=model_name.split(".")[0],
+                features=features,
+                predicted_class=str(prediction_result),
+            )
+
+            return response_data
+
+        except Exception as e:
+            logger.error(f"Prediction error: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Prediction error: {str(e)}"
+            )
 
 
 @app.get("/model/info")
 async def model_info():
-    """Get information about the loaded model."""
-    if model is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-    
-    try:
-        # Get model metadata from MLflow if available
-        model_info = {
-            "model_path": os.environ.get("MODEL_PATH", "models/latest"),
-            "mlflow_tracking_uri": os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"),
-        }
-        
-        return model_info
-    
-    except Exception as e:
-        logger.error(f"Error getting model info: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting model info: {str(e)}")
+    model_path = os.environ.get(
+        "MODEL_PATH", os.path.join(MODEL_DIR, DEFAULT_MODEL)
+    )
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "")
+    return {"model_path": model_path, "mlflow_tracking_uri": tracking_uri}
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+async def get_metrics():
+    return Response(content=metrics.get_metrics(), media_type="text/plain")
 
 
 if __name__ == "__main__":
     import uvicorn
-    
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
