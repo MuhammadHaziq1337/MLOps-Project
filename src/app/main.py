@@ -9,13 +9,12 @@ from typing import Dict, Optional
 
 import joblib
 import pandas as pd
-import prometheus_client
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
-from starlette.middleware.base import BaseHTTPMiddleware
 from prometheus_client import Counter, Histogram
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.app import metrics
 
