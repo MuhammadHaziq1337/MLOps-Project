@@ -1,9 +1,8 @@
 """Data preprocessing utilities."""
 
 import logging
-from typing import Optional, Tuple, Union, List, Dict, Any, cast
+from typing import Optional, Tuple
 
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -81,7 +80,9 @@ def split_data(
     X = df.drop(columns=[target_col])
     y = df[target_col]
 
-    return train_test_split(X, y, test_size=test_size, random_state=random_state)
+    return train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
 
 
 def scale_features(
