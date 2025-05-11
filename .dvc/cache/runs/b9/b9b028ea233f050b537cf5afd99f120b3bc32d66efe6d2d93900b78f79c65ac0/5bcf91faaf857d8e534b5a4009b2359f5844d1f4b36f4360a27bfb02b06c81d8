@@ -1,0 +1,35 @@
+cmd: python -m src.models.run_training --dataset iris
+deps:
+- path: data/processed/iris_X_test.csv
+  hash: md5
+  md5: 981fbfd002cd1f9953058dbb5c5478f8
+  size: 581
+- path: data/processed/iris_X_train.csv
+  hash: md5
+  md5: c8406c4a2eab38f83ea4aeead05eaf96
+  size: 2094
+- path: data/processed/iris_y_test.csv
+  hash: md5
+  md5: e54280656706b84cc39d4537622d5aae
+  size: 98
+- path: data/processed/iris_y_train.csv
+  hash: md5
+  md5: bbcef052f825f5c21f86af905fc5c50b
+  size: 365
+- path: src/models/run_training.py
+  hash: md5
+  md5: db8a751fd2751d669b01d3245973b9cd
+  size: 5616
+- path: src/models/train.py
+  hash: md5
+  md5: 7b0872333bb29457441533ef1cabbf10
+  size: 7499
+outs:
+- path: metrics/model_metrics.json
+  hash: md5
+  md5: 0c240fa436d37d3accf4f9b29073201e
+  size: 76
+- path: models/iris_classification_model.pkl
+  hash: md5
+  md5: a6ffda52288e050139f9f5def8dccd7b
+  size: 162859
