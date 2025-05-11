@@ -1,0 +1,35 @@
+stages:
+  process_data:
+    cmd: python -m src.data.process --dataset iris --raw-data-dir data/raw --processed-data-dir data/processed
+    deps:
+      - src/data/process.py
+      - src/data/preprocessing.py
+    outs:
+      - data/processed/iris_X_train.csv
+      - data/processed/iris_X_test.csv
+      - data/processed/iris_y_train.csv
+      - data/processed/iris_y_test.csv
+    
+  train_model:
+    cmd: python -m src.models.run_training --dataset iris --model-type classification --data-dir data/processed --model-dir models --metrics-file metrics/model_metrics.json
+    deps:
+      - src/models/run_training.py
+      - src/models/train.py
+      - data/processed/iris_X_train.csv
+      - data/processed/iris_X_test.csv
+      - data/processed/iris_y_train.csv
+      - data/processed/iris_y_test.csv
+    outs:
+      - models/iris_classification_model.pkl
+    metrics:
+      - metrics/model_metrics.json:
+          cache: false
+
+  evaluate_model:
+    cmd: python -m scripts.test_api --api-url http://localhost:8000 --dataset iris > metrics/api_test_results.txt
+    deps:
+      - models/iris_classification_model.pkl
+      - scripts/test_api.py
+    metrics:
+      - metrics/api_test_results.txt:
+          cache: false 

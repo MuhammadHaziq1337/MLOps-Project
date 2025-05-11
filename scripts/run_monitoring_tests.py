@@ -8,11 +8,11 @@ This script verifies that:
 """
 
 import os
-import sys
-import json
-import yaml
 import re
+import sys
 from pathlib import Path
+
+import yaml
 
 # Get project root directory
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()

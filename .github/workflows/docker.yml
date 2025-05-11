@@ -73,19 +73,25 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
       
+    # Improved error handling for Docker credentials
     - name: Check DockerHub credentials
+      id: check_creds
       run: |
-        if [[ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]]; then
-          echo "Error: DOCKERHUB_USERNAME secret is not set"
-          exit 1
+        if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+          echo "::warning::DOCKERHUB_USERNAME secret is not set. Will skip publishing to DockerHub."
+          echo "has_creds=false" >> $GITHUB_OUTPUT
+        elif [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+          echo "::warning::DOCKERHUB_TOKEN secret is not set. Will skip publishing to DockerHub."
+          echo "has_creds=false" >> $GITHUB_OUTPUT
+        else
+          echo "DockerHub credentials available"
+          echo "has_creds=true" >> $GITHUB_OUTPUT
         fi
-        if [[ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]]; then
-          echo "Error: DOCKERHUB_TOKEN secret is not set"
-          exit 1
-        fi
-        echo "DockerHub credentials available"
-        
+      shell: bash
+      
+    # Only login if credentials are available
     - name: Login to DockerHub
+      if: steps.check_creds.outputs.has_creds == 'true'
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -101,52 +107,57 @@ jobs:
         else
           echo "version=latest" >> $GITHUB_OUTPUT
         fi
+      shell: bash
         
+    # Only push if credentials are available, otherwise just build
     - name: Build and push API image
       uses: docker/build-push-action@v4
       with:
         context: .
-        push: true
+        push: ${{ steps.check_creds.outputs.has_creds == 'true' }}
         tags: |
           innovateanalytics/mlops-project:${{ steps.meta.outputs.version }}
           ${{ steps.meta.outputs.version == 'latest' && 'innovateanalytics/mlops-project:latest' || '' }}
         cache-from: type=registry,ref=innovateanalytics/mlops-project:buildcache
-        cache-to: type=registry,ref=innovateanalytics/mlops-project:buildcache,mode=max
+        cache-to: ${{ steps.check_creds.outputs.has_creds == 'true' && 'type=registry,ref=innovateanalytics/mlops-project:buildcache,mode=max' || 'type=inline' }}
         
+    # Only push if credentials are available, otherwise just build
     - name: Build and push MLflow image
       uses: docker/build-push-action@v4
       with:
         context: .
         file: ./mlflow/Dockerfile
-        push: true
+        push: ${{ steps.check_creds.outputs.has_creds == 'true' }}
         tags: |
           innovateanalytics/mlops-project-mlflow:${{ steps.meta.outputs.version }}
           ${{ steps.meta.outputs.version == 'latest' && 'innovateanalytics/mlops-project-mlflow:latest' || '' }}
         cache-from: type=registry,ref=innovateanalytics/mlops-project-mlflow:buildcache
-        cache-to: type=registry,ref=innovateanalytics/mlops-project-mlflow:buildcache,mode=max
+        cache-to: ${{ steps.check_creds.outputs.has_creds == 'true' && 'type=registry,ref=innovateanalytics/mlops-project-mlflow:buildcache,mode=max' || 'type=inline' }}
     
+    # Only push if credentials are available, otherwise just build
     - name: Build and push Prometheus image
       uses: docker/build-push-action@v4
       with:
         context: ./monitoring/prometheus
         file: ./monitoring/prometheus/Dockerfile
-        push: true
+        push: ${{ steps.check_creds.outputs.has_creds == 'true' }}
         tags: |
           innovateanalytics/mlops-project-prometheus:${{ steps.meta.outputs.version }}
           ${{ steps.meta.outputs.version == 'latest' && 'innovateanalytics/mlops-project-prometheus:latest' || '' }}
         
+    # Only push if credentials are available, otherwise just build
     - name: Build and push Grafana image
       uses: docker/build-push-action@v4
       with:
         context: ./monitoring/grafana
         file: ./monitoring/grafana/Dockerfile
-        push: true
+        push: ${{ steps.check_creds.outputs.has_creds == 'true' }}
         tags: |
           innovateanalytics/mlops-project-grafana:${{ steps.meta.outputs.version }}
           ${{ steps.meta.outputs.version == 'latest' && 'innovateanalytics/mlops-project-grafana:latest' || '' }}
         
     - name: Update deployment image version
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' && steps.check_creds.outputs.has_creds == 'true'
       run: |
         # Update the Kubernetes deployment YAML to use the new image version
         sed -i "s|image: innovateanalytics/mlops-project:.*|image: innovateanalytics/mlops-project:${{ steps.meta.outputs.version }}|g" k8s/deployment.yaml

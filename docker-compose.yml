@@ -11,6 +11,7 @@ services:
     depends_on:
       - mlflow
     environment:
+      - MODEL_PATH=models
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000 --reload
 
@@ -22,56 +23,21 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./mlruns:/mlruns
+      - ./mlflow/tracking:/mlruns
     environment:
       - MLFLOW_TRACKING_URI=http://localhost:5000
     command: mlflow server --host 0.0.0.0 --port 5000
 
-  # Airflow for workflow orchestration
-  airflow-webserver:
-    image: apache/airflow:2.6.1
-    ports:
-      - "8080:8080"
+  # Development environment
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-    command: webserver
-    healthcheck:
-      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $${HOSTNAME}"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      - .:/app
     depends_on:
-      - airflow-init
-
-  airflow-scheduler:
-    image: apache/airflow:2.6.1
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
+      - mlflow
     environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-    command: scheduler
-    depends_on:
-      - airflow-init
-
-  airflow-init:
-    image: apache/airflow:2.6.1
-    entrypoint: /bin/bash
-    command: -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com"
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False 
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    # This service is for development tasks (training, etc.)
+    command: sleep infinity 

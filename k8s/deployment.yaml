@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: mlops-project
-        image: innovateanalytics/mlops-project:{{VERSION}}
+        image: innovateanalytics/mlops-project:latest
         ports:
         - containerPort: 8000
         resources:
@@ -26,9 +26,25 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        volumeMounts:
+        - name: models-volume
+          mountPath: /app/models
+        envFrom:
+        - configMapRef:
+            name: mlops-config
+        - secretRef:
+            name: mlops-secrets
         env:
-        - name: MLFLOW_TRACKING_URI
-          value: "http://mlflow-service:5000"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: MODEL_PATH
+          value: "/app/models"
         readinessProbe:
           httpGet:
             path: /health
@@ -40,4 +56,8 @@ spec:
             path: /health
             port: 8000
           initialDelaySeconds: 60
-          periodSeconds: 30 
+          periodSeconds: 30
+      volumes:
+      - name: models-volume
+        persistentVolumeClaim:
+          claimName: models-pvc 

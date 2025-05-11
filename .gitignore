@@ -70,11 +70,12 @@ airflow/airflow.db
 airflow/unittests.cfg
 airflow/webserver_config.py
 
-# DVC
+# DVC - ignore data but not .dvc files
 /data/**
 !/data/.gitkeep
 !/data/raw/.gitkeep
 !/data/processed/.gitkeep
+!/data/**/*.dvc
 /models/**
 !/models/.gitkeep
 

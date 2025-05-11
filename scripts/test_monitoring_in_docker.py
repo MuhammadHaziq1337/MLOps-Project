@@ -5,12 +5,13 @@ This script builds and runs Docker containers for the FastAPI app, Prometheus, a
 then verifies that metrics are being properly collected and displayed.
 """
 
-import os
-import time
-import subprocess
-import requests
 import argparse
+import os
+import subprocess
 import sys
+import time
+
+import requests
 
 # Directory containing this script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
