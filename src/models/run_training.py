@@ -16,7 +16,8 @@ try:
     MLFLOW_AVAILABLE = True
 except ImportError:
     MLFLOW_AVAILABLE = False
-    print("Warning: MLflow not available. " "Will save model without MLflow tracking.")
+    print("Warning: MLflow not available. "
+          "Will save model without MLflow tracking.")
 
 from src.models.train import evaluate_model, train_model
 
@@ -41,12 +42,15 @@ def load_data(dataset_name: str, data_dir: str = "data/processed") -> tuple:
     """
     logger.info(f"Loading processed data for {dataset_name} dataset")
 
-    X_train = pd.read_csv(os.path.join(data_dir, f"{dataset_name}_X_train.csv"))
-    X_test = pd.read_csv(os.path.join(data_dir, f"{dataset_name}_X_test.csv"))
-    y_train = pd.read_csv(
-        os.path.join(data_dir, f"{dataset_name}_y_train.csv")
-    ).squeeze()
-    y_test = pd.read_csv(os.path.join(data_dir, f"{dataset_name}_y_test.csv")).squeeze()
+    x_train_path = os.path.join(data_dir, f"{dataset_name}_X_train.csv")
+    x_test_path = os.path.join(data_dir, f"{dataset_name}_X_test.csv")
+    y_train_path = os.path.join(data_dir, f"{dataset_name}_y_train.csv")
+    y_test_path = os.path.join(data_dir, f"{dataset_name}_y_test.csv")
+
+    X_train = pd.read_csv(x_train_path)
+    X_test = pd.read_csv(x_test_path)
+    y_train = pd.read_csv(y_train_path).squeeze()
+    y_test = pd.read_csv(y_test_path).squeeze()
 
     logger.info(
         f"Loaded data with {X_train.shape[0]} training samples and "
@@ -90,7 +94,9 @@ def save_metrics(metrics: dict, output_path: str) -> None:
 
 def main():
     """Main function to train models."""
-    parser = argparse.ArgumentParser(description="Train machine learning model")
+    parser = argparse.ArgumentParser(
+        description="Train machine learning model"
+    )
     parser.add_argument(
         "--dataset",
         type=str,
@@ -159,7 +165,9 @@ def main():
             model_params = {"alpha": 1.0, "solver": "auto", "random_state": 42}
 
     # Load data
-    X_train, X_test, y_train, y_test = load_data(args.dataset, args.data_dir)
+    X_train, X_test, y_train, y_test = load_data(
+        args.dataset, args.data_dir
+    )
 
     # Train model
     if args.use_mlflow:

@@ -50,7 +50,7 @@ class TestApp(unittest.TestCase):
     def test_predict_binary_classification(self, mock_model):
         """Test prediction endpoint for binary classification."""
         # Set up mock model
-        mock_model.predict.return_value = [1]  # Binary classification prediction
+        mock_model.predict.return_value = [1]  # Binary prediction
         mock_model.predict_proba.return_value = [
             [0.2, 0.8]
         ]  # Classification probabilities
@@ -75,7 +75,7 @@ class TestApp(unittest.TestCase):
     def test_predict_multiclass_classification(self, mock_model):
         """Test prediction endpoint for multiclass classification."""
         # Set up mock model
-        mock_model.predict.return_value = [2]  # Multiclass classification prediction
+        mock_model.predict.return_value = [2]  # Multiclass prediction
         mock_model.predict_proba.return_value = [
             [0.1, 0.2, 0.7]
         ]  # Multiclass probabilities
@@ -151,7 +151,8 @@ class TestApp(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertEqual(result["model_path"], "models/test_model")
-        self.assertEqual(result["mlflow_tracking_uri"], "http://test-mlflow:5000")
+        tracking_uri = "http://test-mlflow:5000"
+        self.assertEqual(result["mlflow_tracking_uri"], tracking_uri)
 
 
 if __name__ == "__main__":

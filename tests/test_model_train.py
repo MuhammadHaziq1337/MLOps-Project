@@ -138,7 +138,8 @@ class TestModelTraining(unittest.TestCase):
 
     @patch("mlflow.start_run")
     @patch("mlflow.log_metric")
-    def test_evaluate_classification_model(self, mock_log_metric, mock_start_run):
+    def test_evaluate_classification_model(
+            self, mock_log_metric, mock_start_run):
         """Test evaluating a classification model."""
         # Mock MLflow context
         mock_start_run.return_value = MagicMock()

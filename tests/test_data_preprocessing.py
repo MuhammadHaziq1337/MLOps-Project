@@ -8,7 +8,9 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-from src.data.preprocessing import clean_data, load_data, scale_features, split_data
+from src.data.preprocessing import (
+    clean_data, load_data, scale_features, split_data
+)
 
 
 class TestDataPreprocessing(unittest.TestCase):

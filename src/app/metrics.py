@@ -111,7 +111,9 @@ def record_prediction(
         features: Dictionary of feature name to value
         predicted_class: Predicted class label
     """
-    PREDICTION_COUNT.labels(model_name=model_name, class_name=predicted_class).inc()
+    PREDICTION_COUNT.labels(
+        model_name=model_name,
+        class_name=predicted_class).inc()
 
     _PREDICTIONS_BUFFER.append(features)
     while len(_PREDICTIONS_BUFFER) > _BUFFER_SIZE:
@@ -138,7 +140,9 @@ def _update_feature_statistics(
     feature_values = {}
     for feature_name in predictions[0].keys():
         feature_values[feature_name] = [
-            p.get(feature_name, 0) for p in predictions if feature_name in p
+            p.get(feature_name, 0)
+            for p in predictions
+            if feature_name in p
         ]
 
     for feature_name, values in feature_values.items():
@@ -146,17 +150,20 @@ def _update_feature_statistics(
             continue
 
         mean_value = sum(values) / len(values)
-        FEATURE_MEAN.labels(model_name=model_name, feature=feature_name).set(mean_value)
+        FEATURE_MEAN.labels(
+            model_name=model_name, feature=feature_name
+        ).set(mean_value)
 
         if len(values) > 1:
             variance = sum((x - mean_value) ** 2 for x in values) / len(values)
             stddev = variance**0.5
-            FEATURE_STDDEV.labels(model_name=model_name, feature=feature_name).set(
-                stddev
-            )
+            FEATURE_STDDEV.labels(
+                model_name=model_name, feature=feature_name
+            ).set(stddev)
 
 
-def update_data_drift(model_name: str, feature: str, drift_score: float) -> None:
+def update_data_drift(model_name: str, feature: str,
+                      drift_score: float) -> None:
     """
     Update the data drift score for a specific feature.
 
@@ -165,7 +172,9 @@ def update_data_drift(model_name: str, feature: str, drift_score: float) -> None
         feature: Feature name
         drift_score: Measure of drift (0-1, where 0 is no drift)
     """
-    DATA_DRIFT_SCORE.labels(model_name=model_name, feature=feature).set(drift_score)
+    DATA_DRIFT_SCORE.labels(
+        model_name=model_name,
+        feature=feature).set(drift_score)
 
 
 def get_metrics() -> bytes:

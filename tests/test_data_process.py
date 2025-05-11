@@ -79,7 +79,10 @@ class TestDataProcess(TestCase):
         assert "target" in df.columns
 
         # Check if CSV file was created
-        assert os.path.exists(os.path.join(output_dir, "california_housing.csv"))
+        assert os.path.exists(
+            os.path.join(
+                output_dir,
+                "california_housing.csv"))
 
     def test_get_dataset_unknown(self):
         """Test get_dataset function with unknown dataset."""
@@ -111,7 +114,19 @@ class TestDataProcess(TestCase):
         mock_split_data.assert_called_once()
 
         # Check if files were created
-        assert os.path.exists(os.path.join(output_dir, "test_dataset_X_train.csv"))
-        assert os.path.exists(os.path.join(output_dir, "test_dataset_X_test.csv"))
-        assert os.path.exists(os.path.join(output_dir, "test_dataset_y_train.csv"))
-        assert os.path.exists(os.path.join(output_dir, "test_dataset_y_test.csv"))
+        assert os.path.exists(
+            os.path.join(
+                output_dir,
+                "test_dataset_X_train.csv"))
+        assert os.path.exists(
+            os.path.join(
+                output_dir,
+                "test_dataset_X_test.csv"))
+        assert os.path.exists(
+            os.path.join(
+                output_dir,
+                "test_dataset_y_train.csv"))
+        assert os.path.exists(
+            os.path.join(
+                output_dir,
+                "test_dataset_y_test.csv"))

@@ -27,7 +27,9 @@ class TestMetricsModule(unittest.TestCase):
         self.assertIsInstance(start_time, float)
 
         # Record request end with mocked Counter and Histogram
-        with patch.object(metrics.REQUEST_COUNT, "labels") as mock_counter_labels:
+        with patch.object(
+            metrics.REQUEST_COUNT, "labels"
+        ) as mock_counter_labels:
             with patch.object(
                 metrics.REQUEST_LATENCY, "labels"
             ) as mock_histogram_labels:
@@ -53,7 +55,9 @@ class TestMetricsModule(unittest.TestCase):
                 )
                 mock_histogram.observe.assert_called_once()
                 # Verify observed value is a positive float (latency)
-                self.assertGreaterEqual(mock_histogram.observe.call_args[0][0], 0)
+                self.assertGreaterEqual(
+                    mock_histogram.observe.call_args[0][0], 0
+                )
 
     def test_record_prediction(self):
         """Test recording of model prediction metrics."""
@@ -62,7 +66,9 @@ class TestMetricsModule(unittest.TestCase):
         predicted_class = "class_a"
 
         # Mock metrics
-        with patch.object(metrics.PREDICTION_COUNT, "labels") as mock_counter_labels:
+        with patch.object(
+            metrics.PREDICTION_COUNT, "labels"
+        ) as mock_counter_labels:
             with patch.object(
                 metrics, "_update_feature_statistics"
             ) as mock_update_stats:
@@ -71,7 +77,9 @@ class TestMetricsModule(unittest.TestCase):
                 mock_counter_labels.return_value = mock_counter
 
                 # Call record_prediction
-                metrics.record_prediction(model_name, features, predicted_class)
+                metrics.record_prediction(
+                    model_name, features, predicted_class
+                )
 
                 # Verify counter was incremented with correct labels
                 mock_counter_labels.assert_called_once_with(
@@ -96,8 +104,12 @@ class TestMetricsModule(unittest.TestCase):
 
         # Expected statistics calculation is not needed
         # Mock metrics
-        with patch.object(metrics.FEATURE_MEAN, "labels") as mock_mean_labels:
-            with patch.object(metrics.FEATURE_STDDEV, "labels") as mock_stddev_labels:
+        with patch.object(
+            metrics.FEATURE_MEAN, "labels"
+        ) as mock_mean_labels:
+            with patch.object(
+                metrics.FEATURE_STDDEV, "labels"
+            ) as mock_stddev_labels:
                 # Setup mock gauges
                 mock_mean = MagicMock()
                 mock_mean_labels.return_value = mock_mean
@@ -131,7 +143,9 @@ class TestMetricsModule(unittest.TestCase):
         drift_score = 0.25
 
         # Mock metrics
-        with patch.object(metrics.DATA_DRIFT_SCORE, "labels") as mock_drift_labels:
+        with patch.object(
+            metrics.DATA_DRIFT_SCORE, "labels"
+        ) as mock_drift_labels:
             # Setup mock gauge
             mock_drift = MagicMock()
             mock_drift_labels.return_value = mock_drift
@@ -167,7 +181,9 @@ class TestMetricsModule(unittest.TestCase):
 
         # Verify response
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers["content-type"], "text/plain; charset=utf-8")
+        self.assertEqual(
+            response.headers["content-type"], "text/plain; charset=utf-8"
+        )
 
         # Verify response content
         self.assertIn("http_requests", response.text)
@@ -190,13 +206,15 @@ class TestMetricsModule(unittest.TestCase):
         """Test recording feature values."""
         # Create a mock for the observe method
         mock_observe = MagicMock()
-        
+
         # Create a mock for the labels method that returns the mock_observe
         mock_labels = MagicMock()
         mock_labels.return_value = mock_observe
-        
+
         # Patch the labels method on FEATURE_VALUES
-        with patch.object(metrics.FEATURE_VALUES, "labels", return_value=mock_observe) as mock_labels_fn:
+        with patch.object(
+            metrics.FEATURE_VALUES, "labels", return_value=mock_observe
+        ) as mock_labels_fn:
             # Call the function that records feature values
             metrics.record_feature_values(
                 {"feature1": [1.0, 2.0, 3.0], "feature2": [4.0, 5.0, 6.0]}
@@ -204,7 +222,7 @@ class TestMetricsModule(unittest.TestCase):
 
             # Assert labels was called with each feature
             self.assertEqual(mock_labels_fn.call_count, 6)
-            
+
             # Assert observe was called for each value
             self.assertEqual(mock_observe.observe.call_count, 6)
 

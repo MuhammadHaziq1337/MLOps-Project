@@ -75,10 +75,22 @@ def process_data(df: pd.DataFrame, dataset_name: str, output_dir: str) -> None:
     )
 
     logger.info(f"Saving processed data to {output_dir}")
-    X_train.to_csv(os.path.join(output_dir, f"{dataset_name}_X_train.csv"), index=False)
-    X_test.to_csv(os.path.join(output_dir, f"{dataset_name}_X_test.csv"), index=False)
-    y_train.to_csv(os.path.join(output_dir, f"{dataset_name}_y_train.csv"), index=False)
-    y_test.to_csv(os.path.join(output_dir, f"{dataset_name}_y_test.csv"), index=False)
+    X_train.to_csv(
+        os.path.join(output_dir, f"{dataset_name}_X_train.csv"),
+        index=False
+    )
+    X_test.to_csv(
+        os.path.join(output_dir, f"{dataset_name}_X_test.csv"),
+        index=False
+    )
+    y_train.to_csv(
+        os.path.join(output_dir, f"{dataset_name}_y_train.csv"),
+        index=False
+    )
+    y_test.to_csv(
+        os.path.join(output_dir, f"{dataset_name}_y_test.csv"),
+        index=False
+    )
 
     logger.info("Data processing complete")
 

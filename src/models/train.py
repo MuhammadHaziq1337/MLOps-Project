@@ -71,13 +71,19 @@ def train_model(
     # Select model based on type
     if model_type == "classification":
         if model_params.get("model_name") == "random_forest":
-            params = {k: v for k, v in model_params.items() if k != "model_name"}
+            params = {
+                k: v for k, v in model_params.items()
+                if k != "model_name"
+            }
             model = RandomForestClassifier(**params)
         else:
             model = LogisticRegression(**model_params)
     elif model_type == "regression":
         if model_params.get("model_name") == "random_forest":
-            params = {k: v for k, v in model_params.items() if k != "model_name"}
+            params = {
+                k: v for k, v in model_params.items()
+                if k != "model_name"
+            }
             model = RandomForestRegressor(**params)
         else:
             model = Ridge(**model_params)

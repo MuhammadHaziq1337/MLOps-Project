@@ -161,7 +161,8 @@ class TestDataVersioning(unittest.TestCase):
         # Test successful update with tag
         result = update_dataset(self.dataset_path, "v1.1", "Update dataset")
         self.assertTrue(result)
-        mock_run_cmd.assert_called_once_with(["add", "--force", self.dataset_path])
+        mock_run_cmd.assert_called_once_with(
+            ["add", "--force", self.dataset_path])
         mock_tag.assert_called_once()
 
         # Test with non-existent DVC file (should call track_dataset)
@@ -170,7 +171,8 @@ class TestDataVersioning(unittest.TestCase):
         os.remove(dvc_file)
         result = update_dataset(self.dataset_path, message="Initial tracking")
         self.assertTrue(result)
-        mock_track.assert_called_once_with(self.dataset_path, "Initial tracking")
+        mock_track.assert_called_once_with(
+            self.dataset_path, "Initial tracking")
 
     @patch("scripts.data_versioning.run_dvc_command")
     def test_pull_dataset(self, mock_run_cmd):
