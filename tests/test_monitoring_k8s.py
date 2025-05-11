@@ -3,6 +3,7 @@ Tests for the monitoring components of the MLOps project.
 """
 
 import unittest
+
 import yaml
 
 
@@ -50,33 +51,25 @@ class TestMonitoringK8s(unittest.TestCase):
                 docs = list(yaml.safe_load_all(f))
 
             # Check for required Kubernetes resources
-            resource_kinds = [
-                doc.get("kind") for doc in docs if isinstance(doc, dict)
-            ]
+            resource_kinds = [doc.get("kind") for doc in docs if isinstance(doc, dict)]
             self.assertIn("Namespace", resource_kinds)
             self.assertIn("ConfigMap", resource_kinds)
             self.assertIn("Deployment", resource_kinds)
             self.assertIn("Service", resource_kinds)
 
             # Verify the ConfigMap includes the Prometheus configuration
-            config_maps = [
-                doc for doc in docs if doc.get("kind") == "ConfigMap"
-            ]
+            config_maps = [doc for doc in docs if doc.get("kind") == "ConfigMap"]
             prometheus_config = None
             for cm in config_maps:
                 if cm.get("metadata", {}).get("name") == "prometheus-config":
                     prometheus_config = cm
                     break
 
-            self.assertIsNotNone(
-                prometheus_config, "Prometheus ConfigMap not found"
-            )
+            self.assertIsNotNone(prometheus_config, "Prometheus ConfigMap not found")
             self.assertIn("prometheus.yml", prometheus_config.get("data", {}))
 
             # Verify the Deployment configuration
-            deployments = [
-                doc for doc in docs if doc.get("kind") == "Deployment"
-            ]
+            deployments = [doc for doc in docs if doc.get("kind") == "Deployment"]
             prometheus_deployment = None
             for dep in deployments:
                 if dep.get("metadata", {}).get("name") == "prometheus":
@@ -104,8 +97,7 @@ class TestMonitoringK8s(unittest.TestCase):
 
         except Exception as e:
             self.fail(
-                f"Failed to validate Prometheus Kubernetes deployment: "
-                f"{str(e)}"
+                f"Failed to validate Prometheus Kubernetes deployment: " f"{str(e)}"
             )
 
     def test_grafana_k8s_yaml(self):
@@ -118,26 +110,20 @@ class TestMonitoringK8s(unittest.TestCase):
                 docs = list(yaml.safe_load_all(f))
 
             # Check for required Kubernetes resources
-            resource_kinds = [
-                doc.get("kind") for doc in docs if isinstance(doc, dict)
-            ]
+            resource_kinds = [doc.get("kind") for doc in docs if isinstance(doc, dict)]
             self.assertIn("Deployment", resource_kinds)
             self.assertIn("Service", resource_kinds)
             self.assertIn("ConfigMap", resource_kinds)
 
             # Verify the Deployment configuration
-            deployments = [
-                doc for doc in docs if doc.get("kind") == "Deployment"
-            ]
+            deployments = [doc for doc in docs if doc.get("kind") == "Deployment"]
             grafana_deployment = None
             for dep in deployments:
                 if dep.get("metadata", {}).get("name") == "grafana":
                     grafana_deployment = dep
                     break
 
-            self.assertIsNotNone(
-                grafana_deployment, "Grafana Deployment not found"
-            )
+            self.assertIsNotNone(grafana_deployment, "Grafana Deployment not found")
             container_specs = (
                 grafana_deployment.get("spec", {})
                 .get("template", {})
@@ -155,9 +141,7 @@ class TestMonitoringK8s(unittest.TestCase):
             self.assertIn("grafana/grafana", grafana_container.get("image"))
 
             # Verify Grafana ConfigMaps
-            config_maps = [
-                doc for doc in docs if doc.get("kind") == "ConfigMap"
-            ]
+            config_maps = [doc for doc in docs if doc.get("kind") == "ConfigMap"]
             grafana_dashboards_cm = None
             for cm in config_maps:
                 if cm.get("metadata", {}).get("name") == "grafana-dashboards":
@@ -182,9 +166,7 @@ class TestMonitoringK8s(unittest.TestCase):
             self.assertIn("panels", dashboard)
 
             # Check that we have panels for monitoring ML metrics
-            panel_titles = [
-                panel.get("title") for panel in dashboard.get("panels", [])
-            ]
+            panel_titles = [panel.get("title") for panel in dashboard.get("panels", [])]
             ml_related_titles = [
                 title
                 for title in panel_titles
@@ -205,9 +187,7 @@ class TestMonitoringK8s(unittest.TestCase):
             )
 
         except Exception as e:
-            self.fail(
-                f"Failed to validate Grafana Kubernetes deployment: {str(e)}"
-            )
+            self.fail(f"Failed to validate Grafana Kubernetes deployment: {str(e)}")
 
 
 if __name__ == "__main__":

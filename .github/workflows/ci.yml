@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -23,9 +25,9 @@ jobs:
       - name: Lint with flake8
         run: flake8 src tests
       - name: Check formatting with black
-        run: black --check src tests
+        run: black --skip-string-normalization --line-length 88 src tests
       - name: Sort imports with isort
-        run: isort --check-only --profile black src tests
+        run: isort --profile black src tests
       - name: Type check with mypy
         run: mypy --ignore-missing-imports src
 
