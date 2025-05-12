@@ -5,7 +5,7 @@ metadata:
   labels:
     app: mlops-project
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: mlops-project
@@ -16,28 +16,17 @@ spec:
     spec:
       containers:
       - name: mlops-project
-        image: innovateanalytics/mlops-project:{{VERSION}}
+        image: muhammadhaziq123/mlops-project:latest
         ports:
         - containerPort: 8000
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "100m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
         env:
         - name: MLFLOW_TRACKING_URI
           value: "http://mlflow-service:5000"
+        - name: MODEL_PATH
+          value: "models/latest"
         readinessProbe:
           httpGet:
             path: /health
             port: 8000
           initialDelaySeconds: 30
-          periodSeconds: 10
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 60
-          periodSeconds: 30 
+          periodSeconds: 10 

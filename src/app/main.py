@@ -72,6 +72,21 @@ async def load_model():
         model = None
 
 
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {
+        "message": "Welcome to Innovate Analytics MLOps Project API",
+        "version": "0.1.0",
+        "endpoints": {
+            "health": "/health",
+            "predict": "/predict",
+            "model_info": "/model/info"
+        },
+        "docs": "/docs"
+    }
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""

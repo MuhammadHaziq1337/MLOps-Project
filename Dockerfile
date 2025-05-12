@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project
 COPY . .
 
+# Copy trained model (make sure this happens after the copy project step)
+# COPY models/latest /app/models/latest
+
 # Install the project in development mode
 RUN pip install -e .
 
